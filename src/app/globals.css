@@ -48,6 +48,39 @@
   --radius-full: 9999px;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-canvas: #09090b;
+    --bg-surface: #121216;
+    --bg-subtle: #18181f;
+    --bg-muted: #272732;
+
+    --border-light: rgba(255, 255, 255, 0.1);
+    --border-focus: rgba(255, 255, 255, 0.25);
+    --border-accent: rgba(59, 130, 246, 0.5);
+
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+
+    --jev-emerald-light: rgba(5, 150, 105, 0.15);
+    --jev-emerald-border: rgba(52, 211, 153, 0.3);
+
+    --mistral-amber-light: rgba(234, 88, 12, 0.15);
+    --mistral-amber-border: rgba(251, 146, 60, 0.3);
+
+    --gemini-blue-light: rgba(37, 99, 235, 0.15);
+    --gemini-blue-border: rgba(96, 165, 250, 0.3);
+
+    --security-red-light: rgba(220, 38, 38, 0.15);
+    --security-red-border: rgba(248, 113, 113, 0.3);
+
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5), 0 6px 16px -2px rgba(0, 0, 0, 0.6);
+    --shadow-card-hover: 0 2px 5px rgba(0, 0, 0, 0.6), 0 10px 24px -4px rgba(0, 0, 0, 0.8);
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -87,6 +120,16 @@ body::before {
   will-change: transform;
 }
 
+@media (prefers-color-scheme: dark) {
+  body::before {
+    background-image: 
+      radial-gradient(at 15% 10%, rgba(37, 99, 235, 0.08) 0px, transparent 45%),
+      radial-gradient(at 85% 15%, rgba(234, 88, 12, 0.08) 0px, transparent 45%),
+      radial-gradient(at 50% 80%, rgba(5, 150, 105, 0.08) 0px, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(12, 12, 16, 0.7) 0%, transparent 100%);
+  }
+}
+
 /* Base Container & Grid */
 .app-container {
   max-width: 1440px;
@@ -103,7 +146,7 @@ body::before {
   justify-content: space-between;
   align-items: center;
   padding: 0.85rem 1.25rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-surface);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-light);
@@ -175,6 +218,7 @@ body::before {
   background-color: var(--jev-emerald);
   opacity: 0.75;
   animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
 }
 
 .status-dot {
@@ -209,9 +253,7 @@ body::before {
 
 /* Card Surface */
 .card-panel {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -515,6 +557,8 @@ body::before {
 .answer-scroll-container {
   max-height: 460px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding-right: 0.5rem;
   font-size: 0.92rem;
   line-height: 1.65;
@@ -775,6 +819,8 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 260px;
 }
 
 .flowchart-header {
@@ -831,6 +877,8 @@ body::before {
   justify-content: space-between;
   gap: 1rem;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02), 0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
@@ -945,11 +993,13 @@ body::before {
 .conduit-pulse {
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, var(--gemini-blue), transparent);
   border-radius: var(--radius-full);
+  transform: translateX(-100%);
+  will-change: transform;
 }
 
 .pipeline-conduit.conduit-active .conduit-line {
@@ -970,8 +1020,8 @@ body::before {
 }
 
 @keyframes conduitPulse {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* Worker Stack Column */
@@ -1035,9 +1085,11 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-surface);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-card);
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 520px;
 }
 
 .ttt-header {
@@ -1842,7 +1894,7 @@ body::before {
 }
 
 /* ==========================================================================
-   CLEAN MINIMALIST LOGIN PAGE (COMPLETE DARK MODE)
+   CLEAN MINIMALIST LOGIN PAGE (ADAPTIVE: LIGHT & DARK PER USER PREFERENCE)
    ========================================================================== */
 .login-clean-container {
   min-height: 100vh;
@@ -1851,69 +1903,69 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background-color: #000000;
+  background-color: #f8fafc;
   background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.15), transparent 70%),
-    radial-gradient(circle at 50% 100%, rgba(30, 27, 75, 0.2), transparent 60%);
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.04) 0px, transparent 50%);
   position: relative;
   box-sizing: border-box;
-  color-scheme: dark;
+  color-scheme: light;
+  transition: background-color 0.3s ease;
 }
 
 .login-clean-card {
   width: 100%;
   max-width: 410px;
-  background: rgba(14, 14, 18, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 22px;
   padding: 2.75rem 2.25rem 2.25rem;
   box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 25px 60px -15px rgba(0, 0, 0, 0.95),
-    0 0 40px -10px rgba(59, 130, 246, 0.12);
+    0 1px 3px rgba(0, 0, 0, 0.02),
+    0 20px 40px -15px rgba(15, 23, 42, 0.07);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-brand-icon {
   width: 58px;
   height: 58px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   margin-bottom: 1.5rem;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.18);
   transition: all 0.2s ease;
 }
 
 .login-brand-icon:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.7), 0 0 25px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.25);
 }
 
 .login-clean-title {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #0f172a;
   letter-spacing: -0.03em;
   margin: 0 0 0.5rem 0;
+  transition: color 0.3s ease;
 }
 
 .login-clean-subtitle {
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: #64748b;
   margin: 0 0 2rem 0;
   line-height: 1.45;
+  transition: color 0.3s ease;
 }
 
 .login-action-wrapper {
@@ -1928,8 +1980,8 @@ body::before {
   gap: 0.75rem;
   width: 100%;
   background: #ffffff;
-  color: #09090b;
-  border: 1px solid #ffffff;
+  color: #1e293b;
+  border: 1.5px solid #e2e8f0;
   padding: 0.85rem 1.25rem;
   border-radius: 12px;
   font-size: 0.95rem;
@@ -1937,14 +1989,14 @@ body::before {
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
 }
 
 .google-clean-btn:hover {
-  background: #f4f4f5;
-  border-color: #f4f4f5;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), 0 0 30px rgba(255, 255, 255, 0.25);
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   transform: translateY(-1.5px);
 }
 
@@ -1958,21 +2010,22 @@ body::before {
 
 .google-clean-btn .btn-arrow {
   margin-left: auto;
-  color: #71717a;
+  color: #94a3b8;
   transition: transform 0.18s ease, color 0.18s ease;
 }
 
 .google-clean-btn:hover .btn-arrow {
   transform: translateX(3px);
-  color: #09090b;
+  color: #0f172a;
 }
 
 .login-clean-footer-text {
   font-size: 0.78rem;
-  color: #64748b;
+  color: #94a3b8;
   margin: 0;
   font-weight: 500;
   letter-spacing: 0.01em;
+  transition: color 0.3s ease;
 }
 
 .login-loading-screen {
@@ -1982,23 +2035,108 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #000000;
-  color-scheme: dark;
+  background: #f8fafc;
+  color-scheme: light;
+  transition: background-color 0.3s ease;
 }
 
 .login-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.12);
-  border-top-color: #3b82f6;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  transition: border-color 0.3s ease;
 }
 
 .login-loading-text {
   margin-top: 1rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.88rem;
+  transition: color 0.3s ease;
+}
+
+/* ==========================================================================
+   DARK THEME: AUTOMATICALLY APPLIED IF USER DEVICE PREFERS DARK
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  .login-clean-container {
+    background-color: #000000;
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.15), transparent 70%),
+      radial-gradient(circle at 50% 100%, rgba(30, 27, 75, 0.2), transparent 60%);
+    color-scheme: dark;
+  }
+
+  .login-clean-card {
+    background: rgba(14, 14, 18, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+      0 25px 60px -15px rgba(0, 0, 0, 0.95),
+      0 0 40px -10px rgba(59, 130, 246, 0.12);
+  }
+
+  .login-brand-icon {
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.15);
+  }
+
+  .login-brand-icon:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.7), 0 0 25px rgba(59, 130, 246, 0.25);
+  }
+
+  .login-clean-title {
+    color: #ffffff;
+  }
+
+  .login-clean-subtitle {
+    color: #94a3b8;
+  }
+
+  .google-clean-btn {
+    background: #ffffff;
+    color: #09090b;
+    border: 1px solid #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.12);
+  }
+
+  .google-clean-btn:hover {
+    background: #f4f4f5;
+    border-color: #f4f4f5;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), 0 0 30px rgba(255, 255, 255, 0.25);
+  }
+
+  .google-clean-btn .btn-arrow {
+    color: #71717a;
+  }
+
+  .google-clean-btn:hover .btn-arrow {
+    color: #09090b;
+  }
+
+  .login-clean-footer-text {
+    color: #64748b;
+  }
+
+  .login-loading-screen {
+    background: #000000;
+    color-scheme: dark;
+  }
+
+  .login-spinner {
+    border-color: rgba(255, 255, 255, 0.12);
+    border-top-color: #3b82f6;
+  }
+
+  .login-loading-text {
+    color: #94a3b8;
+  }
 }
 
 /* ==========================================================================
