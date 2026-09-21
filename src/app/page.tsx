@@ -9,8 +9,9 @@ import { JevAnalytics } from "@/components/JevAnalytics";
 import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { TicTacToeGame } from "@/components/TicTacToeGame";
 import { UserNav } from "@/components/UserNav";
+import { HistoryModal } from "@/components/HistoryModal";
 import { PipelineExecutionResult, PipelineNodeId, TargetModel, PipelineEvent } from "@/lib/types";
-import { ShieldCheck, Zap, Swords, Loader2 } from "lucide-react";
+import { ShieldCheck, Zap, Swords, Loader2, History } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function DashboardPage() {
   const [targetModel, setTargetModel] = useState<TargetModel | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState<string>("Ready to execute.");
   const [isLoading, setIsLoading] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Fetch updated quota from server
   const fetchQuota = useCallback(async () => {
@@ -77,13 +79,18 @@ export default function DashboardPage() {
     checkAuthAndLoadQuota();
   }, [router, fetchQuota]);
 
-  // Consume 1 game in Tic-Tac-Toe
-  const handleConsumeGame = async () => {
+  // Consume 1 game in Tic-Tac-Toe and record match outcome in MongoDB
+  const handleConsumeGame = async (gameData?: {
+    winner: "X" | "O" | "tie";
+    difficulty: string;
+    scores: { player: number; bot: number; ties: number };
+    commentary: string;
+  }) => {
     try {
       const res = await fetch("/api/user/quota", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "consume_game" }),
+        body: JSON.stringify({ action: "consume_game", ...(gameData || {}) }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -256,6 +263,15 @@ export default function DashboardPage() {
             <span>In-Path Firewall</span>
           </div>
 
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="header-history-btn"
+            title="View MongoDB Cloud Activity & History"
+          >
+            <History size={14} />
+            <span>Cloud History</span>
+          </button>
+
           <UserNav />
         </div>
       </header>
@@ -307,6 +323,14 @@ export default function DashboardPage() {
           onConsumeGame={handleConsumeGame}
         />
       </section>
+
+      {/* MongoDB Cloud Activity & History Modal */}
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        promptsRemaining={quota.promptsRemaining}
+        gamesRemaining={quota.gamesRemaining}
+      />
     </div>
   );
 }

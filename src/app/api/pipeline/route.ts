@@ -5,6 +5,8 @@ import { calculateMetrics } from "@/lib/metrics";
 import { PipelineEvent, PipelineExecutionResult } from "@/lib/types";
 import { getSessionUser } from "@/lib/auth/session";
 import { consumePrompt } from "@/lib/quota";
+import { connectDb } from "@/lib/db";
+import { PipelineHistory } from "@/models/PipelineHistory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,6 +105,27 @@ export async function POST(req: NextRequest) {
           message: "Critical safety hazard detected. Request routed to Security Block.",
           timestamp: Date.now(),
         });
+
+        // Save blocked execution to MongoDB History
+        try {
+          await connectDb();
+          await PipelineHistory.create({
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+            prompt,
+            response: blockedResult.response,
+            modelUsed: blockedResult.modelUsed,
+            targetModel: "blocked",
+            isBlocked: true,
+            blockReason: jevDecision.reasoning,
+            totalLatencyMs,
+            tokensEstimated: promptTokens,
+          });
+        } catch (dbErr) {
+          console.warn("[Pipeline] Failed to save blocked history:", dbErr);
+        }
+
         return;
       }
 
@@ -163,6 +186,33 @@ export async function POST(req: NextRequest) {
         message: `Pipeline completed in ${totalLatencyMs}ms. Output synthesized.`,
         timestamp: Date.now(),
       });
+
+      // Save successful execution to MongoDB History
+      try {
+        await connectDb();
+        await PipelineHistory.create({
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          prompt,
+          response: finalResult.response,
+          modelUsed: finalResult.modelUsed,
+          targetModel: jevDecision.targetModel,
+          confidence: jevDecision.confidence,
+          isBlocked: false,
+          totalLatencyMs,
+          tokensEstimated: finalResult.tokensEstimated,
+          metrics: {
+            actualCostUsd: metrics.actualCostUsd,
+            baselineUnroutedCostUsd: metrics.baselineUnroutedCostUsd,
+            costSavingsPercent: metrics.costSavingsPercent,
+            promptTokens: metrics.promptTokens,
+            completionTokens: metrics.completionTokens,
+          },
+        });
+      } catch (dbErr) {
+        console.warn("[Pipeline] Failed to save completed history:", dbErr);
+      }
     } catch (err: unknown) {
       console.error("Pipeline streaming error:", err);
       const errorMessage = err instanceof Error ? err.message : "Pipeline execution failed";

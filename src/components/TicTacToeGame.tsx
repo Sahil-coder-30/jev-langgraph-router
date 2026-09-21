@@ -100,7 +100,12 @@ function findBestMove(board: Board, difficulty: Difficulty): number {
 interface TicTacToeGameProps {
   gamesRemaining?: number;
   maxGames?: number;
-  onConsumeGame?: () => Promise<void>;
+  onConsumeGame?: (data: {
+    winner: "X" | "O" | "tie";
+    difficulty: string;
+    scores: { player: number; bot: number; ties: number };
+    commentary: string;
+  }) => Promise<void>;
 }
 
 export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
@@ -172,9 +177,14 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   useEffect(() => {
     if (gameState.winner && !hasReportedGame) {
       setHasReportedGame(true);
-      onConsumeGame?.();
+      onConsumeGame?.({
+        winner: gameState.winner,
+        difficulty,
+        scores,
+        commentary: botCommentary,
+      });
     }
-  }, [gameState.winner, hasReportedGame, onConsumeGame]);
+  }, [gameState.winner, hasReportedGame, onConsumeGame, difficulty, scores, botCommentary]);
 
   // Handle Player Click
   const handleCellClick = (index: number) => {
