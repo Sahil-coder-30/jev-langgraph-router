@@ -7,6 +7,7 @@ import { Flowchart } from "@/components/Flowchart";
 import { JevAnalytics } from "@/components/JevAnalytics";
 import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { TicTacToeGame } from "@/components/TicTacToeGame";
+import { UserNav } from "@/components/UserNav";
 import { PipelineExecutionResult, PipelineNodeId, TargetModel, PipelineEvent } from "@/lib/types";
 import { Cpu, ShieldCheck } from "lucide-react";
 
@@ -104,15 +105,19 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="header-status-badge">
-          <div className="status-dot-wrapper">
-            <span className="status-dot-ping" />
-            <span className="status-dot" />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div className="header-status-badge">
+            <div className="status-dot-wrapper">
+              <span className="status-dot-ping" />
+              <span className="status-dot" />
+            </div>
+            <span>Jev-latest Online</span>
+            <span style={{ color: "var(--border-focus)", margin: "0 0.25rem" }}>•</span>
+            <ShieldCheck size={14} color="var(--jev-emerald)" />
+            <span>In-Path Firewall Active</span>
           </div>
-          <span>Jev-latest Online</span>
-          <span style={{ color: "var(--border-focus)", margin: "0 0.25rem" }}>•</span>
-          <ShieldCheck size={14} color="var(--jev-emerald)" />
-          <span>In-Path Firewall Active</span>
+
+          <UserNav />
         </div>
       </header>
 
