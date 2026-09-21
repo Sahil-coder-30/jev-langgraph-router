@@ -90,6 +90,14 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   );
 }
 
+// Helper to get Google credentials dynamically
+function getGoogleCredentials() {
+  return {
+    clientId: (process.env.GOOGLE_CLIENT_ID || "").trim(),
+    clientSecret: (process.env.GOOGLE_CLIENT_SECRET || "").trim(),
+  };
+}
+
 // Local authentication execution helper
 export async function authenticateLocal(email: string, password: string): Promise<AuthUser> {
   return new Promise((resolve, reject) => {
@@ -103,10 +111,11 @@ export async function authenticateLocal(email: string, password: string): Promis
 
 // Google OAuth URL generator
 export function getGoogleOAuthUrl(redirectUri: string): string {
+  const { clientId } = getGoogleCredentials();
   const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
   const options = {
     redirect_uri: redirectUri,
-    client_id: GOOGLE_CLIENT_ID || "MOCK_GOOGLE_CLIENT_ID",
+    client_id: clientId || "MOCK_GOOGLE_CLIENT_ID",
     access_type: "offline",
     response_type: "code",
     prompt: "consent",
@@ -122,7 +131,9 @@ export function getGoogleOAuthUrl(redirectUri: string): string {
 
 // Google OAuth Code Exchange
 export async function exchangeGoogleCodeForUser(code: string, redirectUri: string): Promise<AuthUser> {
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  const { clientId, clientSecret } = getGoogleCredentials();
+
+  if (!clientId || !clientSecret) {
     // If running in development without real Google credentials, provide mock profile for verification
     return {
       id: `google_${Math.random().toString(36).substring(2, 9)}`,
@@ -141,8 +152,8 @@ export async function exchangeGoogleCodeForUser(code: string, redirectUri: strin
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
@@ -150,7 +161,7 @@ export async function exchangeGoogleCodeForUser(code: string, redirectUri: strin
 
   const tokens = await tokenRes.json();
   if (!tokenRes.ok || !tokens.access_token) {
-    throw new Error(tokens.error_description || "Failed to exchange Google OAuth code");
+    throw new Error(tokens.error_description || tokens.error || "Failed to exchange Google OAuth code");
   }
 
   // Fetch Google User Profile
