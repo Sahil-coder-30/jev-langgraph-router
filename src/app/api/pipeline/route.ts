@@ -3,11 +3,34 @@ import { routeWithJev } from "@/lib/jevRouter";
 import { executeMistralLarge, executeGoogleGemini, LLMCallResult } from "@/lib/llmProviders";
 import { calculateMetrics } from "@/lib/metrics";
 import { PipelineEvent, PipelineExecutionResult } from "@/lib/types";
+import { getSessionUser } from "@/lib/auth/session";
+import { consumePrompt } from "@/lib/quota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // 1. Enforce Authentication
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized. Please sign in with Google to access the LLM pipeline." },
+      { status: 401 }
+    );
+  }
+
+  // 2. Enforce Prompt Quota Limit (5 requests per user)
+  const quotaResult = await consumePrompt();
+  if (!quotaResult.success) {
+    return NextResponse.json(
+      {
+        error: quotaResult.error || "Prompt quota limit reached (5/5 requests used).",
+        quota: quotaResult.quota,
+      },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => ({}));
   const prompt = (body.prompt || "").trim();
 

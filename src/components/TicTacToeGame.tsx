@@ -97,13 +97,26 @@ function findBestMove(board: Board, difficulty: Difficulty): number {
   return bestMove;
 }
 
-export const TicTacToeGame: React.FC = () => {
+interface TicTacToeGameProps {
+  gamesRemaining?: number;
+  maxGames?: number;
+  onConsumeGame?: () => Promise<void>;
+}
+
+export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
+  gamesRemaining = 5,
+  maxGames = 5,
+  onConsumeGame,
+}) => {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState<boolean>(true);
   const [difficulty, setDifficulty] = useState<Difficulty>("strategic");
   const [scores, setScores] = useState({ player: 0, bot: 0, ties: 0 });
   const [botCommentary, setBotCommentary] = useState<string>("Make your move. I'm calculating all 255,168 game states.");
   const [isBotThinking, setIsBotThinking] = useState<boolean>(false);
+  const [hasReportedGame, setHasReportedGame] = useState<boolean>(false);
+
+  const isQuotaExhausted = gamesRemaining <= 0;
 
   const gameState = checkWinner(board);
 
@@ -155,9 +168,17 @@ export const TicTacToeGame: React.FC = () => {
     }
   }, [isPlayerTurn, gameState.winner, handleBotMove]);
 
+  // Report completed match to server quota
+  useEffect(() => {
+    if (gameState.winner && !hasReportedGame) {
+      setHasReportedGame(true);
+      onConsumeGame?.();
+    }
+  }, [gameState.winner, hasReportedGame, onConsumeGame]);
+
   // Handle Player Click
   const handleCellClick = (index: number) => {
-    if (board[index] || !isPlayerTurn || gameState.winner) return;
+    if (board[index] || !isPlayerTurn || gameState.winner || isQuotaExhausted) return;
 
     const newBoard = [...board];
     newBoard[index] = "X";
@@ -178,9 +199,11 @@ export const TicTacToeGame: React.FC = () => {
   };
 
   const handleReset = () => {
+    if (isQuotaExhausted) return;
     setBoard(Array(9).fill(null));
     setIsPlayerTurn(true);
     setIsBotThinking(false);
+    setHasReportedGame(false);
     setBotCommentary("Fresh match initialized. Your turn (X)!");
   };
 
@@ -210,6 +233,11 @@ export const TicTacToeGame: React.FC = () => {
 
         {/* Difficulty Selector & Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div className={`quota-pill-badge ${gamesRemaining <= 1 ? "quota-critical" : gamesRemaining <= 2 ? "quota-warning" : "quota-good"}`}>
+            <Swords size={12} />
+            <span>{gamesRemaining} / {maxGames} Games Left</span>
+          </div>
+
           <div className="ttt-diff-pill-group">
             {(["casual", "strategic", "master"] as Difficulty[]).map((level) => (
               <button
@@ -219,6 +247,7 @@ export const TicTacToeGame: React.FC = () => {
                   setDifficulty(level);
                   handleReset();
                 }}
+                disabled={isQuotaExhausted}
               >
                 {level === "master" && "⚡ "}
                 {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -226,9 +255,14 @@ export const TicTacToeGame: React.FC = () => {
             ))}
           </div>
 
-          <button onClick={handleReset} className="ttt-reset-btn" title="Reset Current Match">
+          <button
+            onClick={handleReset}
+            className="ttt-reset-btn"
+            title={isQuotaExhausted ? "Match quota reached" : "Reset Current Match"}
+            disabled={isQuotaExhausted}
+          >
             <RotateCcw size={14} className="reset-icon" />
-            <span>Reset Match</span>
+            <span>{isQuotaExhausted ? "Quota Reached" : "Reset Match"}</span>
           </button>
         </div>
       </div>
@@ -274,8 +308,12 @@ export const TicTacToeGame: React.FC = () => {
           </div>
 
           {/* Turn Status Pill */}
-          <div className={`ttt-turn-banner ${gameState.winner ? "finished" : isPlayerTurn ? "player" : "bot"}`}>
-            {gameState.winner ? (
+          <div className={`ttt-turn-banner ${isQuotaExhausted ? "finished quota-banner" : gameState.winner ? "finished" : isPlayerTurn ? "player" : "bot"}`}>
+            {isQuotaExhausted ? (
+              <span className="banner-content" style={{ color: "#b91c1c", fontWeight: 600 }}>
+                🛑 Match Quota Limit Reached (0/{maxGames} Left). All free arena matches played.
+              </span>
+            ) : gameState.winner ? (
               gameState.winner === "tie" ? (
                 <span className="banner-content">🤝 Match Drawn! Both sides demonstrated flawless defense.</span>
               ) : gameState.winner === "X" ? (
@@ -325,9 +363,9 @@ export const TicTacToeGame: React.FC = () => {
               return (
                 <button
                   key={idx}
-                  className={`ttt-cell ${cell ? "filled" : ""} ${isWinningCell ? "winning" : ""}`}
+                  className={`ttt-cell ${cell ? "filled" : ""} ${isWinningCell ? "winning" : ""} ${isQuotaExhausted ? "disabled-quota" : ""}`}
                   onClick={() => handleCellClick(idx)}
-                  disabled={!isPlayerTurn || cell !== null || !!gameState.winner}
+                  disabled={!isPlayerTurn || cell !== null || !!gameState.winner || isQuotaExhausted}
                   aria-label={`Board cell ${idx + 1}`}
                 >
                   {cell === "X" && (

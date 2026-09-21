@@ -53,6 +53,7 @@ export const UserNav: React.FC = () => {
       await fetch("/api/auth/logout", { method: "POST" });
       setUser(null);
       setIsDropdownOpen(false);
+      window.location.href = "/login";
     } catch (err) {
       console.error("Logout failed:", err);
     }

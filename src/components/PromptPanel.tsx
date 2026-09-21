@@ -1,13 +1,15 @@
 "use client";
 
 import React from "react";
-import { Play, Sparkles, Code2, Database, ShieldAlert, Loader2 } from "lucide-react";
+import { Play, Sparkles, Code2, Database, ShieldAlert, Loader2, Zap } from "lucide-react";
 
 interface PromptPanelProps {
   prompt: string;
   setPrompt: (value: string) => void;
   onRun: () => void;
   isLoading: boolean;
+  promptsRemaining?: number;
+  maxPrompts?: number;
 }
 
 const PRESETS = [
@@ -46,11 +48,15 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({
   setPrompt,
   onRun,
   isLoading,
+  promptsRemaining = 5,
+  maxPrompts = 5,
 }) => {
+  const isQuotaExhausted = promptsRemaining <= 0;
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
-      if (!isLoading && prompt.trim()) {
+      if (!isLoading && prompt.trim() && !isQuotaExhausted) {
         onRun();
       }
     }
@@ -70,9 +76,15 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({
             </p>
           </div>
         </div>
-        <span className="shortcut-badge">
-          <kbd>⌘</kbd> + <kbd>↵</kbd> to run
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div className={`quota-pill-badge ${promptsRemaining <= 1 ? "quota-critical" : promptsRemaining <= 2 ? "quota-warning" : "quota-good"}`}>
+            <Zap size={12} />
+            <span>{promptsRemaining} / {maxPrompts} Left</span>
+          </div>
+          <span className="shortcut-badge">
+            <kbd>⌘</kbd> + <kbd>↵</kbd>
+          </span>
+        </div>
       </div>
 
       {/* Preset Chips */}
@@ -120,6 +132,21 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({
         )}
       </div>
 
+      {/* Quota Limit Reached Banner */}
+      {isQuotaExhausted && (
+        <div className="prompt-quota-exhausted-banner">
+          <ShieldAlert size={16} color="#ef4444" />
+          <div style={{ flex: 1 }}>
+            <strong style={{ display: "block", color: "#b91c1c", fontSize: "0.82rem" }}>
+              Prompt Quota Limit Reached (0/{maxPrompts} Left)
+            </strong>
+            <span style={{ fontSize: "0.76rem", color: "#7f1d1d" }}>
+              You have used all 5 allowed prompt runs for your session to preserve API quota.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Action Bar */}
       <div className="prompt-actions-bar">
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
@@ -127,19 +154,25 @@ export const PromptPanel: React.FC<PromptPanelProps> = ({
           <span>•</span>
           <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
             <span className="status-dot" style={{ width: 6, height: 6 }} />
-            System One Ready
+            {isQuotaExhausted ? "Quota Exhausted" : "System One Ready"}
           </span>
         </div>
 
         <button
           className="run-pipeline-btn"
           onClick={onRun}
-          disabled={isLoading || !prompt.trim()}
+          disabled={isLoading || !prompt.trim() || isQuotaExhausted}
+          title={isQuotaExhausted ? "Prompt quota limit reached" : "Run LangGraph Pipeline"}
         >
           {isLoading ? (
             <>
               <Loader2 size={16} className="spin-icon" />
               <span>Routing & Executing...</span>
+            </>
+          ) : isQuotaExhausted ? (
+            <>
+              <ShieldAlert size={15} />
+              <span>Quota Limit Reached (0/{maxPrompts})</span>
             </>
           ) : (
             <>

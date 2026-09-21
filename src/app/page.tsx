@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { PromptPanel } from "@/components/PromptPanel";
 import { AnswerPanel } from "@/components/AnswerPanel";
 import { Flowchart } from "@/components/Flowchart";
@@ -9,9 +10,20 @@ import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { TicTacToeGame } from "@/components/TicTacToeGame";
 import { UserNav } from "@/components/UserNav";
 import { PipelineExecutionResult, PipelineNodeId, TargetModel, PipelineEvent } from "@/lib/types";
-import { Cpu, ShieldCheck } from "lucide-react";
+import { ShieldCheck, Zap, Swords, Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [quota, setQuota] = useState({
+    promptsRemaining: 5,
+    promptsUsed: 0,
+    gamesRemaining: 5,
+    gamesUsed: 0,
+    maxPrompts: 5,
+    maxGames: 5,
+  });
+
   const [prompt, setPrompt] = useState(
     "Write a high-performance, generic in-memory PriorityQueue class in TypeScript with O(log n) insert and extractMin operations."
   );
@@ -21,8 +33,76 @@ export default function DashboardPage() {
   const [statusMessage, setStatusMessage] = useState<string>("Ready to execute.");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch updated quota from server
+  const fetchQuota = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/quota");
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quota) {
+          setQuota(data.quota);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch quota:", err);
+    }
+  }, [router]);
+
+  // Enforce session authentication on page load
+  useEffect(() => {
+    async function checkAuthAndLoadQuota() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          router.replace("/login");
+          return;
+        }
+        const data = await res.json();
+        if (!data.user) {
+          router.replace("/login");
+          return;
+        }
+        await fetchQuota();
+      } catch {
+        router.replace("/login");
+      } finally {
+        setIsAuthChecking(false);
+      }
+    }
+
+    checkAuthAndLoadQuota();
+  }, [router, fetchQuota]);
+
+  // Consume 1 game in Tic-Tac-Toe
+  const handleConsumeGame = async () => {
+    try {
+      const res = await fetch("/api/user/quota", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "consume_game" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quota) {
+          setQuota(data.quota);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to consume game quota:", err);
+    }
+  };
+
   const handleRun = async () => {
     if (!prompt.trim() || isLoading) return;
+
+    if (quota.promptsRemaining <= 0) {
+      setStatusMessage("Prompt quota reached: 0/5 remaining.");
+      return;
+    }
 
     setIsLoading(true);
     setResult(null);
@@ -35,6 +115,18 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
+
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
+
+      if (response.status === 429) {
+        const errData = await response.json().catch(() => ({}));
+        setStatusMessage(errData.error || "Prompt quota limit reached (5/5 used).");
+        if (errData.quota) setQuota(errData.quota);
+        return;
+      }
 
       if (!response.ok || !response.body) {
         throw new Error(`Server returned HTTP ${response.status}`);
@@ -88,8 +180,20 @@ export default function DashboardPage() {
       setActiveNode("security");
     } finally {
       setIsLoading(false);
+      await fetchQuota();
     }
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="login-loading-screen">
+        <div className="login-spinner" />
+        <p style={{ marginTop: "1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+          Verifying Google OAuth & Session Quota...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -106,6 +210,41 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Header Quota HUD */}
+          <div className="header-quota-hud">
+            <div
+              className={`header-quota-pill ${
+                quota.promptsRemaining <= 1
+                  ? "quota-critical"
+                  : quota.promptsRemaining <= 2
+                  ? "quota-warning"
+                  : "quota-good"
+              }`}
+              title="Remaining prompt executions for your session"
+            >
+              <Zap size={13} />
+              <span>
+                Prompts: <strong>{quota.promptsRemaining}</strong>/{quota.maxPrompts}
+              </span>
+            </div>
+
+            <div
+              className={`header-quota-pill ${
+                quota.gamesRemaining <= 1
+                  ? "quota-critical"
+                  : quota.gamesRemaining <= 2
+                  ? "quota-warning"
+                  : "quota-good"
+              }`}
+              title="Remaining Tic-Tac-Toe matches for your session"
+            >
+              <Swords size={13} />
+              <span>
+                Games: <strong>{quota.gamesRemaining}</strong>/{quota.maxGames}
+              </span>
+            </div>
+          </div>
+
           <div className="header-status-badge">
             <div className="status-dot-wrapper">
               <span className="status-dot-ping" />
@@ -114,7 +253,7 @@ export default function DashboardPage() {
             <span>Jev-latest Online</span>
             <span style={{ color: "var(--border-focus)", margin: "0 0.25rem" }}>•</span>
             <ShieldCheck size={14} color="var(--jev-emerald)" />
-            <span>In-Path Firewall Active</span>
+            <span>In-Path Firewall</span>
           </div>
 
           <UserNav />
@@ -130,6 +269,8 @@ export default function DashboardPage() {
             setPrompt={setPrompt}
             onRun={handleRun}
             isLoading={isLoading}
+            promptsRemaining={quota.promptsRemaining}
+            maxPrompts={quota.maxPrompts}
           />
 
           <AnswerPanel result={result} isLoading={isLoading} />
@@ -160,7 +301,11 @@ export default function DashboardPage() {
 
       {/* Autonomous AI Tic-Tac-Toe Arena */}
       <section style={{ marginTop: "1.25rem" }}>
-        <TicTacToeGame />
+        <TicTacToeGame
+          gamesRemaining={quota.gamesRemaining}
+          maxGames={quota.maxGames}
+          onConsumeGame={handleConsumeGame}
+        />
       </section>
     </div>
   );
