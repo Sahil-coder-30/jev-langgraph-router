@@ -1,18 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Cpu, Swords, Zap, ArrowRight, CheckCircle2, Lock, AlertCircle } from "lucide-react";
+import { Cpu, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Check if already authenticated
+  // Redirect if already authenticated
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -34,108 +30,37 @@ export default function LoginPage() {
     checkAuth();
   }, [router]);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError("Please fill in both email and password.");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Login failed");
-      }
-
-      router.replace("/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fillDemoAccount = () => {
-    setEmail("admin@langgraph.ai");
-    setPassword("password123");
-    setError(null);
-  };
-
   if (isCheckingAuth) {
     return (
       <div className="login-loading-screen">
         <div className="login-spinner" />
-        <p>Verifying secure session...</p>
+        <p className="login-loading-text">Verifying session...</p>
       </div>
     );
   }
 
   return (
-    <div className="login-page-container">
-      {/* Background glowing ambient orbs */}
-      <div className="login-ambient-orb orb-1" />
-      <div className="login-ambient-orb orb-2" />
-
-      <div className="login-card-wrapper">
-        {/* Top Branding Pill */}
-        <div className="login-badge-header">
-          <div className="brand-badge" style={{ fontSize: "0.72rem" }}>SYSTEM ONE SECURE PORTAL</div>
-          <div className="login-live-ping">
-            <span className="status-dot-ping" />
-            <span className="status-dot" />
-            <span>Jev Router Online</span>
-          </div>
+    <div className="login-clean-container">
+      <div className="login-clean-card">
+        {/* Sleek Brand Icon */}
+        <div className="login-brand-icon">
+          <Cpu size={26} />
         </div>
 
-        {/* Title */}
-        <h1 className="login-title">Sign In to Jev Router</h1>
-        <p className="login-subtitle">
-          Calibrated ~150ms semantic probability routing between <strong>Mistral Large</strong> & <strong>Google Gemini</strong>.
+        {/* Clean, Minimal Header */}
+        <h1 className="login-clean-title">Welcome to Jev</h1>
+        <p className="login-clean-subtitle">
+          Sign in to access your LLM workspace
         </p>
 
-        {/* Quota Highlights Banner */}
-        <div className="login-quota-banner">
-          <div className="quota-banner-badge">
-            <Zap size={14} color="#059669" />
-            <span>Each User Account Includes:</span>
-          </div>
-          <div className="quota-perks-grid">
-            <div className="perk-item">
-              <CheckCircle2 size={15} color="#059669" />
-              <span><strong>5 Free</strong> Prompt Executions</span>
-            </div>
-            <div className="perk-item">
-              <CheckCircle2 size={15} color="#059669" />
-              <span><strong>5 Free</strong> Tic-Tac-Toe Matches</span>
-            </div>
-            <div className="perk-item">
-              <CheckCircle2 size={15} color="#059669" />
-              <span><strong>Zero</strong> Data Leakage Firewall</span>
-            </div>
-            <div className="perk-item">
-              <CheckCircle2 size={15} color="#059669" />
-              <span><strong>Realtime</strong> SSE Benchmarks</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Primary Action: Google OAuth Button */}
-        <div className="login-primary-actions">
+        {/* Google OAuth - Single Source of Truth */}
+        <div className="login-action-wrapper">
           <a
             href="/api/auth/google"
-            className="google-auth-btn-hero"
+            className="google-clean-btn"
             id="google-signin-btn"
           >
-            <svg className="google-icon-svg" viewBox="0 0 24 24" width="22" height="22">
+            <svg className="google-icon-svg" viewBox="0 0 24 24" width="20" height="20">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -154,91 +79,14 @@ export default function LoginPage() {
               />
             </svg>
             <span>Continue with Google</span>
-            <ArrowRight size={17} className="btn-arrow" />
+            <ArrowRight size={16} className="btn-arrow" />
           </a>
         </div>
 
-        {/* Divider */}
-        <div className="login-divider">
-          <span className="divider-line" />
-          <span className="divider-text">OR SIGN IN WITH EMAIL</span>
-          <span className="divider-line" />
-        </div>
-
-        {/* Error Notification */}
-        {error && (
-          <div className="login-error-banner">
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Email / Password Form */}
-        <form onSubmit={handleEmailLogin} className="login-email-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="email-input">
-              Email Address
-            </label>
-            <input
-              id="email-input"
-              type="email"
-              className="form-input"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label className="form-label" htmlFor="password-input">
-                Password
-              </label>
-              <button
-                type="button"
-                className="demo-account-chip"
-                onClick={fillDemoAccount}
-                title="Fill demo credentials"
-              >
-                Use Demo Account
-              </button>
-            </div>
-            <input
-              id="password-input"
-              type="password"
-              className="form-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="email-signin-submit-btn"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="btn-loading-flex">
-                <span className="btn-spinner" />
-                <span>Verifying...</span>
-              </span>
-            ) : (
-              <span className="btn-flex">
-                <Lock size={15} />
-                <span>Sign In with Password</span>
-              </span>
-            )}
-          </button>
-        </form>
-
-        {/* Bottom Trust Badge */}
-        <div className="login-footer-trust">
-          <ShieldCheck size={14} color="#059669" />
-          <span>Protected by Google OAuth 2.0 & Encrypted Session Cookies</span>
-        </div>
+        {/* Minimal Subtle Quota Indicator */}
+        <p className="login-clean-footer-text">
+          Includes 5 prompt runs & 5 games quota
+        </p>
       </div>
     </div>
   );
