@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "testjev",
   "version": "1.0.0",
   "description": "",
   "main": "alpha.js",
@@ -16,6 +16,7 @@
   "dependencies": {
     "@langchain/core": "^1.2.12",
     "@langchain/langgraph": "^1.4.16",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@typesafe-ai/sdk": "^0.6.0",
@@ -27,10 +28,12 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
+    "postcss": "^8.5.28",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"
   },
   "devDependencies": {

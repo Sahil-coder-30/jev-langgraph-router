@@ -3,9 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AuthUser } from "@/lib/auth/types";
 import { AuthModal } from "./AuthModal";
-import { LogIn, LogOut, User as UserIcon, Shield, ChevronDown } from "lucide-react";
+import { LogIn, LogOut, User as UserIcon, Shield, ChevronDown, Sun, Moon, Laptop } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 export const UserNav: React.FC = () => {
+  const { mode, setTheme } = useTheme();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -110,9 +112,38 @@ export const UserNav: React.FC = () => {
 
               <div className="dropdown-divider" />
 
-              <div className="dropdown-section-item">
-                <Shield size={13} color="var(--jev-emerald)" />
-                <span>Session Active • HTTP-Only Cookie</span>
+              {/* Theme Preference: System / Light / Dark */}
+              <div className="dropdown-theme-section">
+                <span className="dropdown-section-title">Appearance</span>
+                <div className="theme-segmented-control">
+                  <button
+                    type="button"
+                    className={`theme-segment-btn ${mode === "system" ? "active" : ""}`}
+                    onClick={() => setTheme("system")}
+                    title="Match system/device preference"
+                  >
+                    <Laptop size={13} />
+                    <span>System</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-segment-btn ${mode === "light" ? "active" : ""}`}
+                    onClick={() => setTheme("light")}
+                    title="Light theme"
+                  >
+                    <Sun size={13} />
+                    <span>Light</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`theme-segment-btn ${mode === "dark" ? "active" : ""}`}
+                    onClick={() => setTheme("dark")}
+                    title="Dark theme"
+                  >
+                    <Moon size={13} />
+                    <span>Dark</span>
+                  </button>
+                </div>
               </div>
 
               <div className="dropdown-divider" />

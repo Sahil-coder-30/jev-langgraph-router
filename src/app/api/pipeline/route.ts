@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { routeWithJev } from "@/lib/jevRouter";
+import { checkSafetyWithJev, guardOutputWithJev, routeWithJev } from "@/lib/jevRouter";
 import { executeMistralLarge, executeGoogleGemini, LLMCallResult } from "@/lib/llmProviders";
 import { calculateMetrics } from "@/lib/metrics";
 import { PipelineEvent, PipelineExecutionResult } from "@/lib/types";
@@ -21,23 +21,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Enforce Prompt Quota Limit (5 requests per user)
-  const quotaResult = await consumePrompt();
-  if (!quotaResult.success) {
-    return NextResponse.json(
-      {
-        error: quotaResult.error || "Prompt quota limit reached (5/5 requests used).",
-        quota: quotaResult.quota,
-      },
-      { status: 429 }
-    );
-  }
-
   const body = await req.json().catch(() => ({}));
   const prompt = (body.prompt || "").trim();
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+  }
+  if (prompt.length > 4000) {
+    return NextResponse.json(
+      { error: "Please keep prompts to 4,000 characters or fewer." },
+      { status: 400 }
+    );
   }
 
   const encoder = new TextEncoder();
@@ -62,38 +56,57 @@ export async function POST(req: NextRequest) {
         timestamp: Date.now(),
       });
 
-      // 2. Jev Router Node
+      // 2. Upfront Jailbreak & Safety Firewall Node (Before Router!)
       await sendEvent({
-        step: "ROUTING_START",
-        activeNode: "router",
-        message: "Jev System One evaluating safety (Noul/Score) & model specialization (Choice)...",
+        step: "FIREWALL_START",
+        activeNode: "firewall",
+        message: "Jev In-Path Security Firewall analyzing prompt for jailbreaks, explicit content, and threats...",
         timestamp: Date.now(),
       });
 
-      const jevDecision = await routeWithJev(prompt);
+      const safety = await checkSafetyWithJev(prompt);
 
-      // 3. Routing Resolved: Check if blocked
-      if (jevDecision.targetModel === "blocked") {
+      // Check if blocked by Safety Firewall
+      if (!safety.isSafe) {
         const totalLatencyMs = Math.round(performance.now() - startTime);
         const promptTokens = Math.round(prompt.length / 4);
         const metrics = calculateMetrics({
           targetModel: "blocked",
-          jevLatencyMs: jevDecision.latencyMs,
+          jevLatencyMs: safety.latencyMs,
           llmLatencyMs: 0,
           totalLatencyMs,
           promptTokens,
           completionTokens: 0,
         });
 
+        const jailbreakPct = Math.round(safety.jailbreakProb * 100);
+        const explicitPct = Math.round(safety.explicitProb * 100);
+        const harmfulPct = Math.round(safety.harmfulProb * 100);
+
         const blockedResult: PipelineExecutionResult = {
           prompt,
-          jev: jevDecision,
-          response: `⛔ **Request Blocked by Jev In-Path Security Firewall**\n\n**Reason:** ${jevDecision.reasoning}\n\n*Threat Analysis:*\n- Jailbreak Probability: **${(jevDecision.safety.jailbreakProb * 100).toFixed(0)}%**\n- Severity Rating: **${jevDecision.safety.severityScore.toFixed(1)} / 3.0**\n\nThis request was stopped before invoking downstream LLMs.`,
+          safety,
+          jev: {
+            targetModel: "blocked",
+            confidence: Math.max(safety.jailbreakProb, safety.explicitProb, safety.harmfulProb),
+            probabilities: { mistral_large: 0, gemini_flash_pro: 0 },
+            safety: {
+              isSafeProb: safety.isSafeProb,
+              jailbreakProb: safety.jailbreakProb,
+              explicitProb: safety.explicitProb,
+              harmfulProb: safety.harmfulProb,
+              severityScore: safety.severityScore,
+              topHazard: safety.topHazard,
+            },
+            reasoning: safety.reasoning,
+            latencyMs: safety.latencyMs,
+          },
+          response: `⛔ **Request Blocked by Jev In-Path Security Firewall**\n\n**Reason:** ${safety.reasoning}\n\n*Threat Analysis:*\n- Jailbreak Risk: **${jailbreakPct}%**\n- Explicit / NSFW Risk: **${explicitPct}%**\n- Harmful Action Risk: **${harmfulPct}%**\n- Severity Rating: **${safety.severityScore.toFixed(1)} / 3.0**\n\nThis prompt was blocked upfront at the firewall. No prompt quota was consumed and no downstream LLMs were invoked.`,
           modelUsed: "Jev Security Firewall",
           tokensEstimated: promptTokens,
           totalLatencyMs,
           isBlocked: true,
-          blockReason: jevDecision.reasoning,
+          blockReason: safety.reasoning,
           metrics,
         };
 
@@ -102,7 +115,7 @@ export async function POST(req: NextRequest) {
           activeNode: "security",
           targetModel: "blocked",
           data: blockedResult,
-          message: "Critical safety hazard detected. Request routed to Security Block.",
+          message: "Critical safety hazard detected. Request blocked at Safety Firewall.",
           timestamp: Date.now(),
         });
 
@@ -118,7 +131,7 @@ export async function POST(req: NextRequest) {
             modelUsed: blockedResult.modelUsed,
             targetModel: "blocked",
             isBlocked: true,
-            blockReason: jevDecision.reasoning,
+            blockReason: safety.reasoning,
             totalLatencyMs,
             tokensEstimated: promptTokens,
           });
@@ -129,37 +142,69 @@ export async function POST(req: NextRequest) {
         return;
       }
 
+      // 3. Quota Deduction (Only spent once prompt passes the upfront firewall)
+      const quotaResult = await consumePrompt();
+      if (!quotaResult.success) {
+        await sendEvent({
+          step: "BLOCKED",
+          activeNode: "security",
+          message: quotaResult.error || "Prompt quota limit reached.",
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      // 4. Jev System One Router Node
+      await sendEvent({
+        step: "ROUTING_START",
+        activeNode: "router",
+        message: "Prompt verified safe. Jev System One selecting optimal model specialization...",
+        timestamp: Date.now(),
+      });
+
+      const jevDecision = await routeWithJev(prompt, safety);
       const activeTargetNode = jevDecision.targetModel === "mistral_large" ? "mistral" : "gemini";
+
       await sendEvent({
         step: "ROUTED",
         activeNode: activeTargetNode,
         targetModel: jevDecision.targetModel,
-        data: { jev: jevDecision },
-        message: `Jev routed to ${jevDecision.targetModel === "mistral_large" ? "Mistral" : "Google Gemini"} (${(jevDecision.confidence * 100).toFixed(0)}% confidence).`,
+        data: { jev: jevDecision, safety },
+        message: `Jev routed to ${jevDecision.targetModel === "mistral_large" ? "Mistral Large" : "Google Gemini"} (${(jevDecision.confidence * 100).toFixed(0)}% confidence).`,
         timestamp: Date.now(),
       });
 
-      // 4. Execute Selected LLM
+      // 5. Execute Selected LLM
       await sendEvent({
         step: "EXECUTING_LLM",
         activeNode: activeTargetNode,
         targetModel: jevDecision.targetModel,
-        message: `Executing ${jevDecision.targetModel === "mistral_large" ? "Mistral" : "Google Gemini"}...`,
+        message: `Executing ${jevDecision.targetModel === "mistral_large" ? "Mistral Large" : "Google Gemini"}...`,
         timestamp: Date.now(),
       });
 
       let llmResult: LLMCallResult;
-
       if (jevDecision.targetModel === "mistral_large") {
         llmResult = await executeMistralLarge(prompt);
       } else {
         llmResult = await executeGoogleGemini(prompt);
       }
 
+      // 6. Independent Output Guard
+      await sendEvent({
+        step: "OUTPUT_GUARD_START",
+        activeNode: "guard",
+        targetModel: jevDecision.targetModel,
+        message: "Jev output guard independently checking response integrity...",
+        timestamp: Date.now(),
+      });
+
+      const outputGuard = await guardOutputWithJev(prompt, llmResult.response);
+
       const totalLatencyMs = Math.round(performance.now() - startTime);
       const metrics = calculateMetrics({
         targetModel: jevDecision.targetModel,
-        jevLatencyMs: jevDecision.latencyMs,
+        jevLatencyMs: safety.latencyMs + jevDecision.latencyMs,
         llmLatencyMs: llmResult.llmLatencyMs,
         totalLatencyMs,
         promptTokens: llmResult.promptTokens,
@@ -168,22 +213,29 @@ export async function POST(req: NextRequest) {
 
       const finalResult: PipelineExecutionResult = {
         prompt,
+        safety,
         jev: jevDecision,
-        response: llmResult.response,
-        modelUsed: llmResult.modelUsed,
+        response: outputGuard.allowed
+          ? llmResult.response
+          : "⛔ **Response withheld by Jev Output Guard**\n\nThe generated answer contained safety policy violations and was withheld.",
+        modelUsed: outputGuard.allowed ? llmResult.modelUsed : "Jev Output Guard",
         tokensEstimated: llmResult.tokensEstimated,
         totalLatencyMs,
-        isBlocked: false,
+        isBlocked: !outputGuard.allowed,
+        blockReason: outputGuard.allowed ? undefined : outputGuard.reasoning,
+        outputGuard,
         metrics,
       };
 
-      // 5. Completed & Formatted
+      // 7. Completed & Formatted
       await sendEvent({
-        step: "COMPLETED",
-        activeNode: "output",
+        step: outputGuard.allowed ? "COMPLETED" : "BLOCKED",
+        activeNode: outputGuard.allowed ? "output" : "security",
         targetModel: jevDecision.targetModel,
         data: finalResult,
-        message: `Pipeline completed in ${totalLatencyMs}ms. Output synthesized.`,
+        message: outputGuard.allowed
+          ? `Pipeline completed in ${totalLatencyMs}ms. Output synthesized.`
+          : "Generated output did not pass output guard and was withheld.",
         timestamp: Date.now(),
       });
 
@@ -199,7 +251,8 @@ export async function POST(req: NextRequest) {
           modelUsed: finalResult.modelUsed,
           targetModel: jevDecision.targetModel,
           confidence: jevDecision.confidence,
-          isBlocked: false,
+          isBlocked: finalResult.isBlocked,
+          blockReason: finalResult.blockReason,
           totalLatencyMs,
           tokensEstimated: finalResult.tokensEstimated,
           metrics: {

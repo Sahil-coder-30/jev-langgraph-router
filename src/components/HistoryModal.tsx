@@ -96,7 +96,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   };
 
   return (
-    <div className="auth-modal-backdrop" onClick={onClose}>
+    <div className="auth-modal-overlay history-modal-overlay" onClick={onClose}>
       <div className="card-panel history-modal-card" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="auth-modal-header">

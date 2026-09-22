@@ -120,26 +120,139 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({ result, isLoading }) =
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  code({ inline, className, children, ...props }: any) {
+                  h1({ children }) {
+                    return (
+                      <h1 className="text-sm sm:text-base font-bold text-white mt-4 mb-2 pb-1.5 border-b border-zinc-800/80 flex items-center gap-2">
+                        {children}
+                      </h1>
+                    );
+                  },
+                  h2({ children }) {
+                    return (
+                      <h2 className="text-xs sm:text-sm font-bold text-zinc-100 mt-3.5 mb-1.5 flex items-center gap-2">
+                        {children}
+                      </h2>
+                    );
+                  },
+                  h3({ children }) {
+                    return (
+                      <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mt-3 mb-1">
+                        {children}
+                      </h3>
+                    );
+                  },
+                  h4({ children }) {
+                    return (
+                      <h4 className="text-xs font-semibold text-zinc-200 mt-2 mb-1">
+                        {children}
+                      </h4>
+                    );
+                  },
+                  p({ children }) {
+                    return <p className="leading-relaxed mb-2.5 last:mb-0 text-zinc-300">{children}</p>;
+                  },
+                  strong({ children }) {
+                    return <strong className="font-bold text-white tracking-tight">{children}</strong>;
+                  },
+                  em({ children }) {
+                    return <em className="italic text-zinc-200">{children}</em>;
+                  },
+                  blockquote({ children }) {
+                    return (
+                      <blockquote className="my-3 border-l-4 border-blue-500 bg-blue-500/10 px-3.5 py-2 text-zinc-200 italic rounded-r-xl shadow-xs">
+                        {children}
+                      </blockquote>
+                    );
+                  },
+                  ul({ children }) {
+                    return (
+                      <ul className="my-2.5 ml-4 list-disc space-y-1.5 text-zinc-300 marker:text-blue-400">
+                        {children}
+                      </ul>
+                    );
+                  },
+                  ol({ children }) {
+                    return (
+                      <ol className="my-2.5 ml-4 list-decimal space-y-1.5 text-zinc-300 marker:text-blue-400 marker:font-bold">
+                        {children}
+                      </ol>
+                    );
+                  },
+                  li({ children }) {
+                    return <li className="leading-relaxed pl-0.5">{children}</li>;
+                  },
+                  hr() {
+                    return <hr className="my-3.5 border-zinc-800" />;
+                  },
+                  a({ href, children }) {
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 underline underline-offset-2 hover:text-blue-300 font-medium"
+                      >
+                        {children}
+                      </a>
+                    );
+                  },
+                  table({ children }) {
+                    return (
+                      <div className="my-3 w-full overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950/60 shadow-md">
+                        <table className="w-full text-left text-xs text-zinc-300 divide-y divide-zinc-800">
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  thead({ children }) {
+                    return <thead className="bg-zinc-900/90 font-semibold text-zinc-100">{children}</thead>;
+                  },
+                  th({ children }) {
+                    return <th className="px-3.5 py-2 text-[11px] font-semibold text-white">{children}</th>;
+                  },
+                  td({ children }) {
+                    return <td className="px-3.5 py-2 text-[11px] border-t border-zinc-800/60 text-zinc-300">{children}</td>;
+                  },
+                  pre({ children }: any) {
+                    return <>{children}</>;
+                  },
+                  code({ className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || "");
                     const codeStr = String(children).replace(/\n$/, "");
-                    return !inline ? (
-                      <div className="code-block-wrapper">
-                        <div className="code-block-header">
-                          <div className="mac-dots">
-                            <span className="dot dot-red" />
-                            <span className="dot dot-yellow" />
-                            <span className="dot dot-green" />
+                    const isBlock = Boolean(match) || codeStr.includes("\n");
+
+                    if (isBlock) {
+                      const language = match ? match[1] : "code";
+                      return (
+                        <div className="code-block-wrapper my-3 w-full max-w-full overflow-hidden rounded-xl border border-zinc-800 bg-[#0d1117] shadow-xl">
+                          <div className="code-block-header flex items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-3.5 py-1.5">
+                            <div className="mac-dots flex items-center gap-1.5">
+                              <span className="dot dot-red h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                              <span className="dot dot-yellow h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+                              <span className="dot dot-green h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                              <span className="code-lang-label ml-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-blue-400">
+                                {language}
+                              </span>
+                            </div>
+                            <CodeCopyButton code={codeStr} />
                           </div>
-                          <span className="code-lang-label">{match ? match[1] : "code"}</span>
-                          <CodeCopyButton code={codeStr} />
+                          <div className="max-w-full overflow-x-auto p-3.5 font-mono text-xs leading-relaxed text-zinc-200">
+                            <pre className="!m-0 !p-0 bg-transparent font-mono">
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            </pre>
+                          </div>
                         </div>
-                        <pre className={className} {...props}>
-                          <code>{children}</code>
-                        </pre>
-                      </div>
-                    ) : (
-                      <code className="inline-code" {...props}>
+                      );
+                    }
+
+                    return (
+                      <code
+                        className="inline-code rounded bg-zinc-800/90 px-1.5 py-0.5 font-mono text-[11px] font-medium text-emerald-300 border border-zinc-700/50"
+                        {...props}
+                      >
                         {children}
                       </code>
                     );

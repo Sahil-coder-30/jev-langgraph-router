@@ -1,5 +1,17 @@
 export type TargetModel = 'mistral_large' | 'gemini_flash_pro' | 'blocked';
 
+export interface JevSafetyDecision {
+  isSafe: boolean;
+  isSafeProb: number;
+  jailbreakProb: number;
+  explicitProb: number;
+  harmfulProb: number;
+  severityScore: number;
+  topHazard: string;
+  reasoning: string;
+  latencyMs: number;
+}
+
 export interface JevRoutingDecision {
   targetModel: TargetModel;
   confidence: number;
@@ -10,8 +22,18 @@ export interface JevRoutingDecision {
   safety: {
     isSafeProb: number;
     jailbreakProb: number;
+    explicitProb?: number;
+    harmfulProb?: number;
     severityScore: number;
+    topHazard?: string;
   };
+  reasoning: string;
+  latencyMs: number;
+}
+
+export interface JevOutputGuardDecision {
+  allowed: boolean;
+  policyViolationProb: number;
   reasoning: string;
   latencyMs: number;
 }
@@ -32,6 +54,7 @@ export interface ExecutionMetrics {
 
 export interface PipelineExecutionResult {
   prompt: string;
+  safety?: JevSafetyDecision;
   jev: JevRoutingDecision;
   response: string;
   modelUsed: string;
@@ -39,18 +62,20 @@ export interface PipelineExecutionResult {
   totalLatencyMs: number;
   isBlocked: boolean;
   blockReason?: string;
+  outputGuard?: JevOutputGuardDecision;
   metrics: ExecutionMetrics;
 }
 
-export type PipelineNodeId = 'input' | 'router' | 'mistral' | 'gemini' | 'security' | 'output';
+export type PipelineNodeId = 'input' | 'firewall' | 'router' | 'mistral' | 'gemini' | 'guard' | 'security' | 'output';
 
 export type PipelineNodeStatus = 'idle' | 'active' | 'success' | 'failed';
 
 export interface PipelineEvent {
-  step: 'START' | 'ROUTING_START' | 'ROUTED' | 'EXECUTING_LLM' | 'COMPLETED' | 'BLOCKED';
+  step: 'START' | 'FIREWALL_START' | 'ROUTING_START' | 'ROUTED' | 'EXECUTING_LLM' | 'OUTPUT_GUARD_START' | 'COMPLETED' | 'BLOCKED';
   activeNode: PipelineNodeId;
   targetModel?: TargetModel;
   data?: Partial<PipelineExecutionResult>;
   message: string;
   timestamp: number;
 }
+

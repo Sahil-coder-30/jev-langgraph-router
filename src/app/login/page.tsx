@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Cpu, ArrowRight } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,6 +42,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-clean-container">
+      <div className="login-top-bar">
+        <ThemeToggle />
+      </div>
       <div className="login-clean-card">
         {/* Sleek Brand Icon */}
         <div className="login-brand-icon">
@@ -48,12 +52,12 @@ export default function LoginPage() {
         </div>
 
         {/* Clean, Minimal Header */}
-        <h1 className="login-clean-title">Welcome to Jev</h1>
+        <h1 className="login-clean-title">Welcome to TestJev</h1>
         <p className="login-clean-subtitle">
           Sign in to access your LLM workspace
         </p>
 
-        {/* Google OAuth - Single Source of Truth */}
+        {/* Google OAuth & Demo Sign-In */}
         <div className="login-action-wrapper">
           <a
             href="/api/auth/google"

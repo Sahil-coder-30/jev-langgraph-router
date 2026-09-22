@@ -18,7 +18,7 @@ export async function executeMistralLarge(prompt: string): Promise<LLMCallResult
   if (mistralKey) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      const timeout = setTimeout(() => controller.abort(), 20000);
 
       const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
         method: "POST",
@@ -32,12 +32,12 @@ export async function executeMistralLarge(prompt: string): Promise<LLMCallResult
             {
               role: "system",
               content:
-                "You are Mistral, a frontier language model specialized in rigorous software engineering, algorithm design, formal logic, and structured technical problem solving. Provide a precise, well-structured, production-ready answer.",
+                "You are Mistral Large, an elite principal software engineer and technical architect. Deliver high-performance code, optimal algorithms, structured software architecture, and deep technical reasoning. Include syntax-highlighted markdown code blocks with clear comments and algorithmic complexity analysis where appropriate.",
             },
             { role: "user", content: prompt },
           ],
           temperature: 0.2,
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
         cache: "no-store",
         signal: controller.signal,
@@ -58,7 +58,7 @@ export async function executeMistralLarge(prompt: string): Promise<LLMCallResult
           tokensEstimated,
           promptTokens,
           completionTokens,
-          modelUsed: "Mistral (open-mistral-nemo)",
+          modelUsed: "Mistral Large (open-mistral-nemo)",
           llmLatencyMs,
         };
       } else {
@@ -81,7 +81,7 @@ export async function executeMistralLarge(prompt: string): Promise<LLMCallResult
     tokensEstimated: promptTokens + completionTokens,
     promptTokens,
     completionTokens,
-    modelUsed: "Mistral (High-Precision Simulation)",
+    modelUsed: "Mistral Large (Simulation)",
     llmLatencyMs,
   };
 }
@@ -91,51 +91,76 @@ export async function executeGoogleGemini(prompt: string): Promise<LLMCallResult
   const startTime = performance.now();
 
   if (geminiKey) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
+    const candidateModels = [
+      { id: "gemini-2.5-flash-lite", name: "Google Gemini 2.5 Flash Lite" },
+      { id: "gemini-3.5-flash-lite", name: "Google Gemini 3.5 Flash Lite" },
+      { id: "gemini-3.6-flash", name: "Google Gemini 3.6 Flash" },
+      { id: "gemini-flash-latest", name: "Google Gemini Flash" },
+    ];
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
-            },
-          }),
-          cache: "no-store",
-          signal: controller.signal,
+    for (const { id: modelId, name: modelDisplayName } of candidateModels) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 20000);
+
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${geminiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                systemInstruction: {
+                  parts: [
+                    {
+                      text: "You are Google Gemini, an insightful, creative, and comprehensive AI assistant. Provide articulate, engaging, well-structured explanations, creative storytelling, analogies, and multi-faceted synthesis. Format responses using clean markdown headers and bullet points.",
+                    },
+                  ],
+                },
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                  temperature: 0.3,
+                  maxOutputTokens: 2048,
+                },
+              }),
+              cache: "no-store",
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeout);
+
+          if (res.ok) {
+            const data = await res.json();
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+            const promptTokens = data.usageMetadata?.promptTokenCount || Math.round(prompt.length / 4);
+            const completionTokens = data.usageMetadata?.candidatesTokenCount || Math.round(content.length / 4);
+            const tokensEstimated = promptTokens + completionTokens;
+            const llmLatencyMs = Math.round(performance.now() - startTime);
+
+            return {
+              response: content,
+              tokensEstimated,
+              promptTokens,
+              completionTokens,
+              modelUsed: modelDisplayName,
+              llmLatencyMs,
+            };
+          }
+
+          if (res.status === 503 && attempt === 0) {
+            // Temporary high-demand spike on model; pause and retry once
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            continue;
+          }
+
+          const errText = await res.text();
+          console.warn(`Gemini API error (${modelId}):`, res.status, errText.slice(0, 200));
+          break; // Move to next model
+        } catch (e) {
+          console.warn(`Gemini fetch error (${modelId}):`, e);
+          break;
         }
-      );
-      clearTimeout(timeout);
-
-      const llmLatencyMs = Math.round(performance.now() - startTime);
-
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
-        const promptTokens = data.usageMetadata?.promptTokenCount || Math.round(prompt.length / 4);
-        const completionTokens = data.usageMetadata?.candidatesTokenCount || Math.round(content.length / 4);
-        const tokensEstimated = promptTokens + completionTokens;
-
-        return {
-          response: content,
-          tokensEstimated,
-          promptTokens,
-          completionTokens,
-          modelUsed: "Google Gemini 2.5 Flash Lite",
-          llmLatencyMs,
-        };
-      } else {
-        const errText = await res.text();
-        console.warn("Gemini API error:", res.status, errText);
       }
-    } catch (e) {
-      console.warn("Gemini fetch error, falling back to simulated generation:", e);
     }
   }
 
@@ -150,7 +175,7 @@ export async function executeGoogleGemini(prompt: string): Promise<LLMCallResult
     tokensEstimated: promptTokens + completionTokens,
     promptTokens,
     completionTokens,
-    modelUsed: "Google Gemini (Fluid Synthesis Simulation)",
+    modelUsed: "Google Gemini (Simulation)",
     llmLatencyMs,
   };
 }

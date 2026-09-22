@@ -97,7 +97,15 @@ function findBestMove(board: Board, difficulty: Difficulty): number {
   return bestMove;
 }
 
-interface TicTacToeGameProps {
+export interface TicTacToeStateUpdate {
+  board: (Player | null)[];
+  moveCount: number;
+  playerTurn: "player" | "bot";
+  difficulty: Difficulty;
+  winner: Player | "tie" | null;
+}
+
+export interface TicTacToeGameProps {
   gamesRemaining?: number;
   maxGames?: number;
   onConsumeGame?: (data: {
@@ -106,12 +114,14 @@ interface TicTacToeGameProps {
     scores: { player: number; bot: number; ties: number };
     commentary: string;
   }) => Promise<void>;
+  onStateUpdate?: (update: TicTacToeStateUpdate) => void;
 }
 
 export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   gamesRemaining = 5,
   maxGames = 5,
   onConsumeGame,
+  onStateUpdate,
 }) => {
   const [board, setBoard] = useState<Board>(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState<boolean>(true);
@@ -124,6 +134,18 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   const isQuotaExhausted = gamesRemaining <= 0;
 
   const gameState = checkWinner(board);
+
+  // Notify parent of state changes for Jev Model probability evaluation
+  useEffect(() => {
+    const moveCount = board.filter((c) => c !== null).length;
+    onStateUpdate?.({
+      board,
+      moveCount,
+      playerTurn: isPlayerTurn ? "player" : "bot",
+      difficulty,
+      winner: gameState.winner,
+    });
+  }, [board, isPlayerTurn, difficulty, gameState.winner, onStateUpdate]);
 
   // Handle Bot Turn
   const handleBotMove = useCallback(() => {
@@ -227,27 +249,22 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <h2 className="brand-title" style={{ fontSize: "1.15rem" }}>
-                Autonomous AI Tic-Tac-Toe Arena
+              <h2 className="brand-title" style={{ fontSize: "1.1rem" }}>
+                AI Arena
               </h2>
               <span className="ttt-live-pill">
                 <span className="status-dot" style={{ width: 6, height: 6 }} />
-                Minimax Engine
+                Minimax
               </span>
             </div>
-            <p className="brand-subtitle" style={{ fontSize: "0.8rem", marginTop: "2px" }}>
-              Human (X) vs. Autonomous Bot (O) with 255,168 State Tree Search
+            <p className="brand-subtitle" style={{ fontSize: "0.78rem", marginTop: "2px" }}>
+              Play against the autonomous decision bot
             </p>
           </div>
         </div>
 
         {/* Difficulty Selector & Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <div className={`quota-pill-badge ${gamesRemaining <= 1 ? "quota-critical" : gamesRemaining <= 2 ? "quota-warning" : "quota-good"}`}>
-            <Swords size={12} />
-            <span>{gamesRemaining} / {maxGames} Games Left</span>
-          </div>
-
+        <div className="ttt-controls-group">
           <div className="ttt-diff-pill-group">
             {(["casual", "strategic", "master"] as Difficulty[]).map((level) => (
               <button
