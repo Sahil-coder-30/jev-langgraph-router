@@ -81,7 +81,7 @@ export const UserNav: React.FC = () => {
   return (
     <>
       {user ? (
-        <div className="user-profile-wrapper" ref={dropdownRef}>
+        <div className="user-profile-wrapper" ref={dropdownRef} style={{ position: "relative", zIndex: 1002 }}>
           <button
             className="user-profile-btn"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -104,7 +104,7 @@ export const UserNav: React.FC = () => {
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="user-dropdown-menu">
+            <div className="user-dropdown-menu" style={{ position: "absolute", zIndex: 99999 }}>
               <div className="dropdown-user-header">
                 <p className="dropdown-user-name">{user.name}</p>
                 <p className="dropdown-user-email">{user.email}</p>

@@ -106,7 +106,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             </div>
             <div>
               <h2 className="auth-modal-title" style={{ fontSize: "1.15rem" }}>
-                MongoDB Cloud Activity & History
+                Cloud Activity & History
               </h2>
               <p className="auth-modal-subtitle">
                 Real-time persistence for prompts, router choices & AI arena games
@@ -130,7 +130,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           </div>
           <div className="history-summary-chip db-chip">
             <span className="status-dot" style={{ width: 6, height: 6 }} />
-            <span>MongoDB Atlas (jev)</span>
+            <span>Cloud Sync (Active)</span>
           </div>
         </div>
 
@@ -157,14 +157,14 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           {isLoading ? (
             <div className="history-loading-box">
               <span className="btn-spinner" style={{ borderColor: "rgba(37, 99, 235, 0.2)", borderTopColor: "var(--gemini-blue)" }} />
-              <p>Fetching history from MongoDB Atlas...</p>
+              <p>Fetching activity history...</p>
             </div>
           ) : activeTab === "prompts" ? (
             prompts.length === 0 ? (
               <div className="history-empty-box">
                 <Sparkles size={24} color="#94a3b8" />
                 <p>No prompt pipeline runs recorded yet.</p>
-                <span>Execute a prompt to see its routing breakdown stored in MongoDB!</span>
+                <span>Execute a prompt to see its routing breakdown stored in history!</span>
               </div>
             ) : (
               <div className="history-cards-scroll">

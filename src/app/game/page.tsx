@@ -154,7 +154,7 @@ export default function GamePage() {
                 Autonomous AI Tic-Tac-Toe Arena
               </h2>
               <p className="game-page-desc">
-                Play against minimax intelligence while LangGraph logs games to MongoDB.
+                Play against minimax intelligence while LangGraph logs matches in real time.
               </p>
             </div>
           </div>

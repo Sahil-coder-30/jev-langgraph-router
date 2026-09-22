@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({ quota, onOpenHistory }) => {
   const isGame = pathname === "/game";
 
   return (
-    <header className="app-header">
+    <header className="app-header" style={{ position: "relative", zIndex: 1000 }}>
       {/* Brand & Title */}
       <div className="brand-group">
         <Link href="/" className="brand-link">
@@ -58,7 +58,8 @@ export const Navbar: React.FC<NavbarProps> = ({ quota, onOpenHistory }) => {
           className={`nav-tab-pill ${isGame ? "active" : ""}`}
         >
           <Swords size={15} />
-          <span>Tic-Tac-Toe Arena</span>
+          <span className="nav-label-desktop">Tic-Tac-Toe Arena</span>
+          <span className="nav-label-mobile">AI Arena</span>
           <span className="nav-tab-badge">{quota.gamesRemaining} left</span>
         </Link>
       </nav>
@@ -78,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({ quota, onOpenHistory }) => {
             title="Remaining prompt executions"
           >
             <Zap size={13} />
-            <span>{quota.promptsRemaining}/{quota.maxPrompts} Prompts</span>
+            <span>{quota.promptsRemaining}/{quota.maxPrompts} <span className="quota-text-label">Prompts</span></span>
           </div>
 
           <div
@@ -92,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({ quota, onOpenHistory }) => {
             title="Remaining Tic-Tac-Toe matches"
           >
             <Swords size={13} />
-            <span>{quota.gamesRemaining}/{quota.maxGames} Games</span>
+            <span>{quota.gamesRemaining}/{quota.maxGames} <span className="quota-text-label">Games</span></span>
           </div>
         </div>
 
@@ -100,14 +101,16 @@ export const Navbar: React.FC<NavbarProps> = ({ quota, onOpenHistory }) => {
         <button
           onClick={onOpenHistory}
           className="header-history-btn"
-          title="View MongoDB Cloud Activity & History"
+          title="View Cloud Activity & History"
         >
           <History size={14} />
           <span>History</span>
         </button>
 
         {/* User Navigation Dropdown */}
-        <UserNav />
+        <div className="z-20">
+          <UserNav />
+        </div>
       </div>
     </header>
   );

@@ -62,7 +62,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           </div>
           <div className="analytics-stat-card">
             <span className="stat-label">Jev Decision</span>
-            <span className="stat-value val-emerald">&lt; 25ms</span>
+            <span className="stat-value val-emerald">&lt; 250ms</span>
             <span className="stat-hint">Typed judgment</span>
           </div>
         </div>

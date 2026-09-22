@@ -106,8 +106,13 @@ export const Flowchart: React.FC<FlowchartProps> = ({
         </div>
       </div>
 
+      {/* Mobile Swipe Hint */}
+      <div className="flowchart-scroll-hint">
+        <span>↔ Swipe to inspect pipeline stages</span>
+      </div>
+
       {/* Main Flowchart Pipeline Canvas */}
-      <div className="flowchart-stage-canvas">
+      <div className="flowchart-stage-canvas" role="region" aria-label="Pipeline Architecture Diagram" tabIndex={0}>
         {/* ============================================================
             STEP 1: INGEST NODE
            ============================================================ */}
